@@ -60,6 +60,7 @@ use rayon::{
 /// Moreover, this structure makes it possible to [sort the components by
 /// size](Sccs::sort_by_size), possibly using [parallel
 /// methods](Sccs::par_sort_by_size).
+#[derive(Epserde, Clone, Copy, Debug)]
 pub struct Sccs {
     num_components: usize,
     components: Box<[usize]>,

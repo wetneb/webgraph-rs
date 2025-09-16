@@ -13,6 +13,7 @@ authors = [
 	"Matteo Dell'Acqua <dellacqua.matteo99@gmail.com>",
 	"Sebastiano Vigna <sebastiano.vigna@unimi.it>",
 ]
+rust-version = "1.85"
 
 [dependencies]
 card-est-array.workspace = true
@@ -29,6 +30,7 @@ rand.workspace = true
 log.workspace = true
 rayon.workspace = true
 sync-cell-slice.workspace = true
+crossbeam-utils.workspace = true
 
 nonmax = "0.5.5"
 sealed = "0.6.0"

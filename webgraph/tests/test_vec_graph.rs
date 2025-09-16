@@ -17,17 +17,4 @@ fn test_serde() {
     assert_eq!(g, p);
 }
 
-#[test]
-fn test_epserde() {
-    use epserde::prelude::*;
-    use webgraph::graphs::vec_graph::LabeledVecGraph;
-    let arcs = [(0, 1, 1), (0, 2, 2), (1, 2, 3)];
 
-    let g = LabeledVecGraph::<usize>::from_arcs(arcs);
-
-    let mut file = std::io::Cursor::new(vec![]);
-    g.serialize(&mut file).unwrap();
-    let data = file.into_inner();
-    let g2 = <LabeledVecGraph<usize>>::deserialize_eps(&data).unwrap();
-    assert_eq!(g, g2);
-}

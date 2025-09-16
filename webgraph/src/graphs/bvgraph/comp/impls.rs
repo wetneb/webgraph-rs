@@ -127,10 +127,11 @@ impl BvComp<()> {
             0,
         );
 
-        let mut pl = ProgressLogger::default();
-        pl.display_memory(true)
-            .item_name("node")
-            .expected_updates(num_nodes);
+        let mut pl = progress_logger![
+            display_memory = true,
+            item_name = "node",
+            expected_updates = num_nodes,
+        ];
         pl.start("Compressing successors...");
         let mut bitstream_len = 0;
 
@@ -177,7 +178,7 @@ impl BvComp<()> {
 
         log::info!("Writing the .properties file");
         let properties = compression_flags
-            .to_properties::<BE>(real_num_nodes, num_arcs, bitstream_len)
+            .to_properties::<E>(real_num_nodes, num_arcs, bitstream_len)
             .context("Could not serialize properties")?;
         let properties_path = basename.with_extension(PROPERTIES_EXTENSION);
         std::fs::write(&properties_path, properties)
@@ -290,6 +291,14 @@ impl BvComp<()> {
 
         let thread_path = |thread_id: usize| tmp_dir.join(format!("{:016x}.bitstream", thread_id));
 
+        let mut comp_pl = concurrent_progress_logger![
+            log_target = "webgraph::graphs::bvgraph::comp::impls::parallel_iter::comp",
+            display_memory = true,
+            item_name = "node",
+            local_speed = true,
+            expected_updates = Some(num_nodes),
+        ];
+        comp_pl.start("Compressing successors in parallel...");
         threads.in_place_scope(|s| {
             let cp_flags = &compression_flags;
 
@@ -298,9 +307,10 @@ impl BvComp<()> {
                 let chunk_graph_path = tmp_path.with_extension(GRAPH_EXTENSION);
                 let chunk_offsets_path = tmp_path.with_extension(OFFSETS_EXTENSION);
                 let tx = tx.clone();
+                let mut comp_pl = comp_pl.clone();
                 // Spawn the thread
                 s.spawn(move |_| {
-                    log::info!("Thread {} started", thread_id);
+                    log::debug!("Thread {} started", thread_id);
                     let first_node;
                     let mut bvcomp;
                     let mut offsets_writer;
@@ -330,6 +340,7 @@ impl BvComp<()> {
                             );
                             written_bits = bvcomp.push(successors).unwrap();
                             offsets_written_bits = offsets_writer.write_gamma(written_bits).unwrap() as u64;
+
                         }
                     };
 
@@ -344,8 +355,11 @@ impl BvComp<()> {
                     let num_arcs = bvcomp.arcs;
                     bvcomp.flush().unwrap();
                     offsets_writer.flush().unwrap();
+                    comp_pl.update_with_count(last_node - first_node + 1);
 
-                    log::info!(
+
+
+                    log::debug!(
                         "Finished Compression thread {} and wrote {} bits for the graph and {} bits for the offsets",
                         thread_id,
                         written_bits,
@@ -366,6 +380,15 @@ impl BvComp<()> {
             }
 
             drop(tx);
+
+            let mut copy_pl = progress_logger![
+                log_target = "webgraph::graphs::bvgraph::comp::impls::parallel_iter::copy",
+                display_memory = true,
+                item_name = "node",
+                local_speed = true,
+                expected_updates = Some(num_nodes),
+            ];
+            copy_pl.start("Copying compressed successors to final graph");
 
             let file = File::create(&graph_path)
                 .with_context(|| format!("Could not create graph {}", graph_path.display()))?;
@@ -406,7 +429,7 @@ impl BvComp<()> {
 
                 next_node = last_node + 1;
                 total_arcs += num_arcs;
-                log::info!(
+                log::debug!(
                     "Copying {} [{}..{}) bits from {} to {}",
                     written_bits,
                     total_written_bits,
@@ -431,7 +454,7 @@ impl BvComp<()> {
                         )
                     })?;
 
-                log::info!(
+                log::debug!(
                     "Copying offsets {} [{}..{}) bits from {} to {}",
                     offsets_written_bits,
                     total_offsets_written_bits,
@@ -455,15 +478,21 @@ impl BvComp<()> {
                             offsets_path.display()
                         )
                     })?;
+
+                copy_pl.update_with_count(last_node - first_node + 1);
             }
+
 
             log::info!("Flushing the merged bitstreams");
             graph_writer.flush()?;
             offsets_writer.flush()?;
 
+            comp_pl.done();
+            copy_pl.done();
+
             log::info!("Writing the .properties file");
             let properties = compression_flags
-                .to_properties::<BE>(num_nodes, total_arcs, total_written_bits)
+                .to_properties::<E>(num_nodes, total_arcs, total_written_bits)
                 .context("Could not serialize properties")?;
             let properties_path = basename.with_extension(PROPERTIES_EXTENSION);
             std::fs::write(&properties_path, properties).with_context(|| {

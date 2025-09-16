@@ -12,6 +12,7 @@ authors = [
 	"Tommaso Fontana <tommaso.fontana.96@gmail.com>",
 	"Sebastiano Vigna <sebastiano.vigna@unimi.it>",
 ]
+rust-version = "1.85"
 
 [features]
 default = []
@@ -44,8 +45,8 @@ num_cpus.workspace = true
 predicates.workspace = true
 java-properties.workspace = true
 sync-cell-slice.workspace = true
+sysinfo.workspace = true
 arbitrary = { workspace = true, optional = true }
-
 libc = "0.2.155"
 impl-tools = "0.10.0"
 bitflags = "2.6.0"
@@ -54,9 +55,10 @@ rdst = { version = "0.20.14", features = ["multi-threaded"] }
 sealed = "0.6.0"
 serde = { workspace = true, optional = true }
 crossbeam-channel = "0.5"
+thread_local = "1.1.8"
 
 # Fuzzing deps
-zip = { version = "4.0.0", optional = true }
+zip = { version = "5.0.0", optional = true }
 
 [dev-dependencies]
 serde.workspace = true
