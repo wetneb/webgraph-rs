@@ -286,3 +286,30 @@ fn flush_buffer<
     buf.clear();
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_simple_example() {
+        let num_partitions = 2;
+        let num_nodes: usize = 5;
+        let unsorted_pairs = vec![(4, 4), (3, 4), (1, 1), (0, 1), (2, 1)];
+
+        let pair_sorter = ParSortPairs::new(num_nodes)
+            .unwrap()
+            .expected_num_pairs(unsorted_pairs.len())
+            .num_partitions(NonZeroUsize::new(num_partitions).unwrap());
+
+        assert_eq!(
+            pair_sorter
+                .par_sort_pairs(unsorted_pairs.par_iter().copied())
+                .unwrap()
+                .into_iter()
+                .map(|partition| partition.into_iter().collect::<Vec<_>>())
+                .collect::<Vec<_>>(),
+            vec![vec![(0, 1), (1, 1), (2, 1)], vec![(3, 4), (4, 4)],],
+        );
+    }
+}
