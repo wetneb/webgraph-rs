@@ -5,8 +5,8 @@
  */
 
 use crate::traits::*;
-use core::mem::MaybeUninit;
 use anyhow::{ensure, Result};
+use core::mem::MaybeUninit;
 use lender::*;
 
 /// An adapter exhibiting a list of labeled arcs sorted by source as a [labeled
@@ -103,14 +103,15 @@ impl<L: Clone + 'static, I: Iterator<Item = (usize, usize, L)>> Iter<L, I> {
     }
 
     /// Creates an [`Iter`] of outgoing arcs for nodes from `from` to `from+num_nodes-1`.
-    pub fn new_from(num_nodes: usize, iter: I, from: usize) -> Result<Self> {
-        let mut iter = iter.peekable();
-        if let Some((first_src, _, _)) = iter.peek() {
-            ensure!(*first_src >= from, "Tried to create arc_list_graph::Iter starting from {from} using an iterator starting from {first_src}");
-        }
+    pub fn new_from(num_nodes: usize, mut iter: I, from: usize) -> Result<Self> {
         Ok(Iter {
             num_nodes: num_nodes + from,
-            next_node: from,
+            curr_node: from,
+            next_pair: iter.next().unwrap_or((usize::MAX, usize::MAX, unsafe {
+                #[allow(clippy::uninit_assumed_init)]
+                // SAFETY: L is Copy
+                MaybeUninit::uninit().assume_init()
+            })),
             iter,
         })
     }

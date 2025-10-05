@@ -16,5 +16,3 @@ fn test_serde() {
     let p: LabeledVecGraph<usize> = serde_json::from_str(&res).unwrap();
     assert_eq!(g, p);
 }
-
-
